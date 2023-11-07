@@ -56,7 +56,7 @@ int main()
 
 	// 127.0.0.1 is a loopback address
 	serverAddr.sin_addr.s_addr
-		= inet_addr("10.0.2.4");
+		= inet_addr("10.0.2.15");
 
 	// Binding the socket id with
 	// the socket structure
