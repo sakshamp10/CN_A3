@@ -85,18 +85,19 @@ int main() {
         buffer[strcspn(buffer, "\n")] = 0; // Remove newline character from the buffer
         send(clientSocket, buffer, strlen(buffer), 0);
         
-        int bytesRead = recv(clientSocket, bufferans, sizeof(bufferans), 0);
+        // Wait for the response immediately after sending the request
+        char response[1024];
+        int bytesRead = recv(clientSocket, response, sizeof(response), 0);
         if (bytesRead <= 0) {
             if (bytesRead < 0) {
-                printf("Error in receiving data.\n");
+                perror("recv failed");
             }
             break; // Exit the loop if the server disconnects or an error occurs
-        } else {
-            bufferans[bytesRead] = '\0'; // Null-terminate the received data
-            printf("Server: %s\n", bufferans);
         }
-        bzero(buffer, sizeof(buffer)); // Clear the buffer for the next message
-        bzero(bufferans, sizeof(bufferans)); // Clear the response buffer
+        response[bytesRead] = '\0'; // Null-terminate the received data
+        printf("Server: %s\n", response);
+
+        bzero(buffer, sizeof(buffer)); // Clear the buffer for the next message
     }
     close(clientSocket);
 
