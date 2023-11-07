@@ -128,7 +128,7 @@
 #include <unistd.h>
 
 // PORT number
-#define PORT 4444
+#define PORT 8080
 
 unsigned int min(unsigned int a, unsigned int b){
     if(a < b) return a;
