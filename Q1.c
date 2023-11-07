@@ -225,23 +225,40 @@ int main() {
             // Send a confirmation message to the client
             send(clientSocket, "hi client", strlen("hi client"), 0);
 
+            // while (1) {
+            //     bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+            //     if (bytesRead <= 0) {
+            //         break; // Exit the loop when the client disconnects
+            //     }
+
+            //     buffer[bytesRead] = '\0'; // Null-terminate the received data
+            //     unsigned int result = atoi(buffer);
+            //     unsigned int ans = fact(result);
+
+            //     // Compute the length of the answer
+            //     char charArray[1024]; // Ensure the buffer is large enough
+            //     snprintf(charArray, sizeof(charArray), "%u", ans);
+
+            //     // Send the computed factorial back to the client
+            //     send(clientSocket, charArray, strlen(charArray), 0);
+            // }
             while (1) {
-                bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
-                if (bytesRead <= 0) {
-                    break; // Exit the loop when the client disconnects
-                }
+    bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+    if (bytesRead <= 0) {
+        break; // Exit the loop when the client disconnects
+    }
 
-                buffer[bytesRead] = '\0'; // Null-terminate the received data
-                unsigned int result = atoi(buffer);
-                unsigned int ans = fact(result);
+    buffer[bytesRead] = '\0'; // Null-terminate the received data
+    unsigned int result = atoi(buffer);
+    unsigned int ans = fact(result);
 
-                // Compute the length of the answer
-                char charArray[1024]; // Ensure the buffer is large enough
-                snprintf(charArray, sizeof(charArray), "%u", ans);
+    // Compute the length of the answer
+    char charArray[1024]; // Ensure the buffer is large enough
+    snprintf(charArray, sizeof(charArray), "%u\n", ans); // Add a newline character
 
-                // Send the computed factorial back to the client
-                send(clientSocket, charArray, strlen(charArray), 0);
-            }
+    // Send the computed factorial back to the client
+    send(clientSocket, charArray, strlen(charArray), 0);
+}
 
             close(clientSocket);
             exit(0); // End the child process
