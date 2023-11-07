@@ -23,7 +23,7 @@
 
 #define FLIGHT_NUM_SIZE            15
 
-#define SERVER_PORT                "4358"
+#define SERVER_PORT                "8080"
 #define STORE_FLIGHT               1
 #define FLIGHT_TIME_STORED         2
 #define FLIGHT_TIME                3
