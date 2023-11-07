@@ -258,7 +258,7 @@ int main() {
 
     // Send the computed factorial back to the client
     send(clientSocket, charArray, strlen(charArray), 0);
-}
+            }
 
             close(clientSocket);
             exit(0); // End the child process
