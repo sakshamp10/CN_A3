@@ -8,138 +8,112 @@
 #include <pthread.h>
 #include <unistd.h>
 
-// PORT number
 #define PORT 4444
+#define MAX_CLIENTS 10
+#define BUFFER_SIZE 1024
 
 unsigned int min(unsigned int a, unsigned int b){
-    if(a<b) return a;
-    return b;
+    return a < b ? a : b;
 }
 
 unsigned int fact(unsigned int n){
-    unsigned int i=1;
-    for(unsigned int j=1;j<=min(n,20);j++){
-        i=i*j;
+    unsigned int result = 1;
+    for(unsigned int j = 1; j <= min(n, 20); j++){ // Limit to prevent overflow
+        result *= j;
     }
-    return i;
+    return result;
 }
-// Function to handle client communication in a separate thread
+
 void *clientHandler(void *arg) {
     int clientSocket = *((int *)arg);
-    free(arg); // Free the memory allocated for the argument
+    free(arg);
 
-    // Send a confirmation message to the client
-    send(clientSocket, "hi client", strlen("hi client"), 0);
-
-    char buffer[1024];
+    char buffer[BUFFER_SIZE + 1];
     int bytesRead;
 
-    while (1) {
-        // Receive the message from the client
-        bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesRead <= 0) {
-            break; // Exit the loop when the client disconnects
-        } else {
-            buffer[bytesRead] = '\0'; // Null-terminate the received data
-            unsigned int result;
+    send(clientSocket, "hi client", strlen("hi client"), 0);
 
-            result = atoi(buffer);
-            printf("\n%u\n",result);
-            unsigned int ans=fact(result);
-            unsigned int ans2=ans,l=0;
-            while(ans2>0){
-                ans2=ans2/10;
-                l++;
-            }
-            char charArray[l+1];
-            sprintf(charArray, "%u", ans);
-            charArray[l]='\0';
-            send(clientSocket, charArray, l+1, 0);
-            printf("Client: %s\n", buffer);
+    while (1) {
+        bytesRead = recv(clientSocket, buffer, BUFFER_SIZE, 0);
+        if (bytesRead <= 0) {
+            if (bytesRead < 0) perror("recv error");
+            break;
         }
+        buffer[bytesRead] = '\0';
+
+        unsigned int num = atoi(buffer);
+        unsigned int ans = fact(num);
+
+        char charArray[BUFFER_SIZE];
+        snprintf(charArray, sizeof(charArray), "%u", ans);
+        send(clientSocket, charArray, strlen(charArray), 0);
     }
 
-    // Close the client socket
     close(clientSocket);
     return NULL;
 }
 
 int main() {
-    // Server socket id
     int sockfd, ret;
-
-    // Server socket address structures
     struct sockaddr_in serverAddr;
-
-    // Client socket id
     int clientSocket;
-
-    // Client socket address structures
     struct sockaddr_in cliAddr;
-
-    // Stores byte size of server socket address
     socklen_t addr_size;
 
-    // Create a TCP socket id from IPV4 family
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
-    // Error handling if socket id is not valid
     if (sockfd < 0) {
-        printf("Error in connection.\n");
+        perror("Error in connection");
         exit(1);
     }
+    printf("Server Socket is created\n");
 
-    printf("Server Socket is created.\n");
-
-    // Initialize the address structure with NULL
     memset(&serverAddr, 0, sizeof(serverAddr));
-
-    // Assign port number and IP address to the socket created
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORT);
-    serverAddr.sin_addr.s_addr = INADDR_ANY; // Use INADDR_ANY to bind to all available network interfaces
+    serverAddr.sin_addr.s_addr = INADDR_ANY;
 
-    // Bind the socket id with the socket structure
     ret = bind(sockfd, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
-
-    // Error handling
     if (ret < 0) {
-        printf("Error in binding.\n");
+        perror("Error in binding");
+        close(sockfd);
         exit(1);
     }
 
-    // Listening for connections (up to 10)
-    if (listen(sockfd, 10) == 0) {
+    if (listen(sockfd, MAX_CLIENTS) == 0) {
         printf("Listening...\n\n");
+    } else {
+        perror("listen error");
+        close(sockfd);
+        exit(1);
     }
 
-    int cnt = 0;
     while (1) {
-        // Accept clients and store their information in cliAddr
         addr_size = sizeof(cliAddr);
         clientSocket = accept(sockfd, (struct sockaddr *)&cliAddr, &addr_size);
-
-        // Error handling
         if (clientSocket < 0) {
-            exit(1);
+            perror("accept error");
+            continue;
         }
-
-        // Display information of connected client
         printf("Connection accepted from %s:%d\n", inet_ntoa(cliAddr.sin_addr), ntohs(cliAddr.sin_port));
 
-        // Print the number of clients connected till now
-        printf("Clients connected: %d\n\n", ++cnt);
-
-        // Create a thread to handle the client
-        int *clientSocketPtr = (int *)malloc(sizeof(int));
+        int *clientSocketPtr = malloc(sizeof(int));
+        if(clientSocketPtr == NULL) {
+            perror("malloc error");
+            close(clientSocket);
+            continue;
+        }
         *clientSocketPtr = clientSocket;
+
         pthread_t tid;
-        pthread_create(&tid, NULL, clientHandler, (void *)clientSocketPtr);
-        pthread_detach(tid); // Detach the thread to clean up resources
+        if (pthread_create(&tid, NULL, clientHandler, (void *)clientSocketPtr) != 0) {
+            perror("pthread_create error");
+            free(clientSocketPtr);
+            close(clientSocket);
+            continue;
+        }
+        pthread_detach(tid);
     }
 
-    // Close the server socket id (not reached in this code)
     close(sockfd);
-
     return 0;
 }
