@@ -178,7 +178,7 @@ int main() {
     // Assign port number and IP address to the socket created
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORT);
-    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    serverAddr.sin_addr.s_addr = inet_addr("10.0.2.15");
 
     // Binding the socket id with the socket structure
     ret = bind(sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
