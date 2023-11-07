@@ -198,7 +198,6 @@ int get_input (void)
         return option;
     }
 }
-
 void error (char *msg)
 {
     perror (msg);
