@@ -121,11 +121,10 @@ int main (int argc, char **argv)
 	error ("malloc");
     maxfds = NUM_FDS;
 
-    pollfds -> fd = listener;
-    pollfds -> events = POLLIN;
-    pollfds -> revents = 0;
+    pollfds[0].fd = listener;
+    pollfds[0].events = POLLIN;
     numfds = 1;
-
+    
     socklen_t addrlen;
     struct sockaddr_storage client_saddr;
     char str [INET6_ADDRSTRLEN];
@@ -134,28 +133,37 @@ int main (int argc, char **argv)
     struct tnode *root = NULL;
 
     while (1) {
-        // monitor readfds for readiness for reading
-	nfds = numfds;
-	if (poll (pollfds, nfds, -1) == -1)
-	    error ("poll");
-        
-        // Some sockets are ready. Examine readfds
-        for (int fd = 0; fd < (nfds + 1); fd++) {
-            if ((pollfds + fd) -> fd <= 0) // file desc == 0 is not expected, as these are socket fds and not stdin
-		continue;
+        nfds = numfds;
+        if (poll(pollfds, nfds, -1) == -1)
+            error("poll");
 
-            if (((pollfds + fd) -> revents & POLLIN) == POLLIN) {  // fd is ready for reading 
-                if ((pollfds + fd) -> fd == listener) {  // request for new connection
-                    addrlen = sizeof (struct sockaddr_storage);
-                    int fd_new;
-                    if ((fd_new = accept (listener, (struct sockaddr *) &client_saddr, &addrlen)) == -1)
-                        error ("accept");
-                    // add fd_new to pollfds
-		    if (numfds == maxfds) { // create space
-                        if ((pollfds = realloc (pollfds, (maxfds + NUM_FDS) * sizeof (struct pollfd))) == NULL)
-	                    error ("malloc");
+        for (int fd = 0; fd < nfds; fd++) {
+            if (pollfds[fd].fd <= 0) // Skip invalid descriptors
+                continue;
+
+            if (pollfds[fd].revents & POLLIN) {
+                if (pollfds[fd].fd == listener) {
+                    // New connection request
+                    addrlen = sizeof(client_saddr);
+                    int client_fd = accept(listener, (struct sockaddr *)&client_saddr, &addrlen);
+                    if (client_fd == -1)
+                        error("accept");
+
+                    // Send a welcome message to the client
+                    if (send(client_fd, WELCOME_MSG, strlen(WELCOME_MSG), 0) == -1) {
+                        error("send");
+                    }
+
+                    // Add the new file descriptor to pollfds
+                    if (numfds == maxfds) {
                         maxfds += NUM_FDS;
-		    }
+                        pollfds = realloc(pollfds, maxfds * sizeof(struct pollfd));
+                        if (!pollfds)
+                            error("realloc");
+                    }
+
+                    pollfds[numfds].fd = client_fd;
+                    pollfds[numfds].events = POLLIN;
                     numfds++;
 		    (pollfds + numfds - 1) -> fd = fd_new;
                     (pollfds + numfds - 1) -> events = POLLIN;
