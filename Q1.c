@@ -257,7 +257,7 @@ int main() {
     snprintf(charArray, sizeof(charArray), "%u\n", ans); // Add a newline character
 
     // Send the computed factorial back to the client
-    send(clientSocket, charArray, strlen(charArray), 0);
+    send(clientSocket, charArray, strlen(charArray), 0);
             }
 
             close(clientSocket);
@@ -269,5 +269,5 @@ int main() {
 
     // The following code is theoretically unreachable
     close(sockfd);
-    return 0;
+    return 0;
 }
