@@ -97,8 +97,8 @@ int main() {
         response[bytesRead] = '\0'; // Null-terminate the received data
         printf("Server: %s\n", response);
 
-        bzero(buffer, sizeof(buffer)); // Clear the buffer for the next message
-    }
+        bzero(buffer, sizeof(buffer));
+    }
     close(clientSocket);
 
     return 0;
