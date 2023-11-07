@@ -48,7 +48,7 @@ int main()
 
 	// 127.0.0.1 is Loopback IP
 	serverAddr.sin_addr.s_addr
-		= inet_addr("127.0.0.1");
+		= inet_addr("10.0.2.15");
 
 	// connect() to connect to the server
 	ret = connect(clientSocket,
