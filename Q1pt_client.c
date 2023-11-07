@@ -58,7 +58,7 @@ int main() {
     // Assigning port number and IP address
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORT);
-    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    serverAddr.sin_addr.s_addr = inet_addr("10.0.2.15");
 
     // connect() to connect to the server
     ret = connect(clientSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
