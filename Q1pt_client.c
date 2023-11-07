@@ -89,7 +89,7 @@ int main() {
     //     printf("%s\n", bufferans);
     // }
     while (1) {
-    printf("Client: ");
+    printf("\nClient: ");
     fgets(buffer, sizeof(buffer), stdin);
     buffer[strcspn(buffer, "\n")] = 0; // Remove newline character from the buffer
     send(clientSocket, buffer, strlen(buffer), 0);
