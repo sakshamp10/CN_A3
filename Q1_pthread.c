@@ -29,7 +29,7 @@ void *clientHandler(void *arg) {
     free(arg); // Free the memory allocated for the argument
 
     // Send a confirmation message to the client
-    send(clientSocket, "hi client", strlen("hi client"), 0);
+    // send(clientSocket, "hi client", strlen("hi client"), 0);
 
     char buffer[1024];
     int bytesRead;
