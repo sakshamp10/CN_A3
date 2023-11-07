@@ -78,25 +78,26 @@ int main() {
 
     // User input and send messages to the server
     char buffer[1024];
-    // while (1) {
-    //     printf("Client: ");
-    //     fgets(buffer, sizeof(buffer), stdin);
-    //     send(clientSocket, buffer, strlen(buffer), 0);
-    //     bzero(buffer, sizeof(buffer));
-    //     char bufferans[1024];
-    //     int by = recv(clientSocket, bufferans, sizeof(bufferans), 0);
-    //     bufferans[by] = '\0';
-    //     printf("%s\n", bufferans);
-    // }
+    char bufferans[1024];
     while (1) {
-    printf("\nClient: ");
-    fgets(buffer, sizeof(buffer), stdin);
-    buffer[strcspn(buffer, "\n")] = 0; // Remove newline character from the buffer
-    send(clientSocket, buffer, strlen(buffer), 0);
-    
-    // No need to immediately receive here, let the serverHandler thread handle incoming messages
-    bzero(buffer, sizeof(buffer)); // Clear the buffer for the next message
-}
+        printf("Client: ");
+        fgets(buffer, sizeof(buffer), stdin);
+        buffer[strcspn(buffer, "\n")] = 0; // Remove newline character from the buffer
+        send(clientSocket, buffer, strlen(buffer), 0);
+        
+        int bytesRead = recv(clientSocket, bufferans, sizeof(bufferans), 0);
+        if (bytesRead <= 0) {
+            if (bytesRead < 0) {
+                printf("Error in receiving data.\n");
+            }
+            break; // Exit the loop if the server disconnects or an error occurs
+        } else {
+            bufferans[bytesRead] = '\0'; // Null-terminate the received data
+            printf("Server: %s\n", bufferans);
+        }
+        bzero(buffer, sizeof(buffer)); // Clear the buffer for the next message
+        bzero(bufferans, sizeof(bufferans)); // Clear the response buffer
+    }
 
     // Close the client socket (not reached in this code)
     close(clientSocket);
