@@ -85,7 +85,7 @@ int main() {
         }
 
         // Display information of connected client
-        printf("Connection accepted from %s:%d\n", inet_ntoa(cliAddr.sin_addr), ntohs(cliAddr.sin_port);
+        printf("Connection accepted from %s:%d\n", inet_ntoa(cliAddr.sin_addr), ntohs(cliAddr.sin_port));
 
         // Print the number of clients connected till now
         printf("Clients connected: %d\n\n", ++cnt);
