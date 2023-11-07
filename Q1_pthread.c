@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <pthread.h> // Include the pthread library
+#include <pthread.h>
 #include <unistd.h>
 
 // PORT number
@@ -18,6 +18,20 @@ void *clientHandler(void *arg) {
 
     // Send a confirmation message to the client
     send(clientSocket, "hi client", strlen("hi client"), 0);
+
+    char buffer[1024];
+    int bytesRead;
+
+    while (1) {
+        // Receive the message from the client
+        bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if (bytesRead <= 0) {
+            break; // Exit the loop when the client disconnects
+        } else {
+            buffer[bytesRead] = '\0'; // Null-terminate the received data
+            printf("Client: %s\n", buffer);
+        }
+    }
 
     // Close the client socket
     close(clientSocket);
@@ -57,10 +71,10 @@ int main() {
     // Assign port number and IP address to the socket created
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORT);
-    serverAddr.sin_addr.s_addr = inet_addr("10.0.2.15");
+    serverAddr.sin_addr.s_addr = INADDR_ANY; // Use INADDR_ANY to bind to all available network interfaces
 
     // Bind the socket id with the socket structure
-    ret = bind(sockfd, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
+    ret = bind(sockfd, (struct sockaddr *)&serverAddr, sizeof(serverAddr);
 
     // Error handling
     if (ret < 0) {
@@ -85,7 +99,7 @@ int main() {
         }
 
         // Display information of connected client
-        printf("Connection accepted from %s:%d\n", inet_ntoa(cliAddr.sin_addr), ntohs(cliAddr.sin_port));
+        printf("Connection accepted from %s:%d\n", inet_ntoa(cliAddr.sin_addr), ntohs(cliAddr.sin_port);
 
         // Print the number of clients connected till now
         printf("Clients connected: %d\n\n", ++cnt);
@@ -96,8 +110,6 @@ int main() {
         pthread_t tid;
         pthread_create(&tid, NULL, clientHandler, (void *)clientSocketPtr);
         pthread_detach(tid); // Detach the thread to clean up resources
-
-        // Note: In a real-world application, you should consider handling errors and resource cleanup.
     }
 
     // Close the server socket id (not reached in this code)
