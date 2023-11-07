@@ -84,8 +84,8 @@ int main() {
         send(clientSocket, buffer, strlen(buffer), 0);
         bzero(buffer, sizeof(buffer));
         char bufferans[1024];
-        int bytesRead = recv(clientSocket, bufferans, sizeof(bufferans), 0);
-        bufferans[bytesRead] = '\0';
+        int by = recv(clientSocket, bufferans, sizeof(bufferans), 0);
+        bufferans[by] = '\0';
         printf("%s\n", bufferans);
     }
 
