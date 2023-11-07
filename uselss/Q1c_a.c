@@ -14,7 +14,7 @@
 #define LOG_FILE_NAME "2d2.txt"
 FILE *filedis = NULL;
 
-#define PORT 6969
+#define PORT 4444
 
 long long factorial(long long n){
 
