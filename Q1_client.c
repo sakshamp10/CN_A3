@@ -21,6 +21,7 @@ int main()
 
 	// Client socket structure
 	struct sockaddr_in cliAddr;
+	struct sockaddr_in serverAddr;
 
 	// char array to store incoming message
 	char buffer[1024];
