@@ -17,19 +17,23 @@ void *serverHandler(void *arg) {
     free(arg); // Free the memory allocated for the argument
 
     char buffer[1024];
+    int bytesRead;
+
     while (1) {
-        // recv() receives the message from the server and stores it in the buffer
-        if (recv(clientSocket, buffer, 1024, 0) < 0) {
-            printf("Error in receiving data.\n");
-            break; // Exit the thread on error
+        bytesRead = recv(clientSocket, buffer, 1024, 0);
+        if (bytesRead <= 0) {
+            if (bytesRead < 0) {
+                printf("Error in receiving data.\n");
+            }
+            break; // Exit the thread when the server closes the connection
         } else {
-            printf("Server: %s\n", buffer);
-            bzero(buffer, sizeof(buffer));
+            buffer[bytesRead] = '\0'; // Null-terminate the received data
+            printf("Server: %s", buffer);
         }
     }
 
     close(clientSocket); // Close the client socket
-    return NULL;
+    pthread_exit(NULL); // Exit the thread
 }
 
 int main() {
@@ -38,9 +42,6 @@ int main() {
 
     // Client socket structure
     struct sockaddr_in serverAddr;
-
-    // char array to store incoming message
-    char buffer[1024];
 
     // Creating socket id
     clientSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -54,18 +55,13 @@ int main() {
     // Initializing socket structure with NULL
     memset(&serverAddr, 0, sizeof(serverAddr));
 
-    // Initializing buffer array with NULL
-    memset(buffer, 0, sizeof(buffer));
-
     // Assigning port number and IP address
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORT);
-
-    // 127.0.0.1 is Loopback IP
-    serverAddr.sin_addr.s_addr = inet_addr("10.0.2.15");
+    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
     // connect() to connect to the server
-    ret = connect(clientSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
+    ret = connect(clientSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr);
 
     if (ret < 0) {
         printf("Error in connection.\n");
@@ -79,15 +75,18 @@ int main() {
     *clientSocketPtr = clientSocket;
     pthread_t tid;
     pthread_create(&tid, NULL, serverHandler, (void *)clientSocketPtr);
-    pthread_detach(tid); // Detach the thread to clean up resources
 
     // User input and send messages to the server
+    char buffer[1024];
     while (1) {
         printf("Client: ");
         fgets(buffer, sizeof(buffer), stdin);
         send(clientSocket, buffer, strlen(buffer), 0);
         bzero(buffer, sizeof(buffer));
     }
+
+    // Close the client socket (not reached in this code)
+    close(clientSocket);
 
     return 0;
 }
