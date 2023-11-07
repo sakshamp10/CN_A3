@@ -165,7 +165,7 @@ int main (int argc, char **argv)
                     pollfds[numfds].fd = client_fd;
                     pollfds[numfds].events = POLLIN;
                     numfds++;
-		    (pollfds + numfds - 1) -> fd = fd_new;
+		    (pollfds + numfds - 1) -> fd = client_fd;
                     (pollfds + numfds - 1) -> events = POLLIN;
                     (pollfds + numfds - 1) -> revents = 0;
 
