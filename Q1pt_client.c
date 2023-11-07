@@ -83,6 +83,10 @@ int main() {
         fgets(buffer, sizeof(buffer), stdin);
         send(clientSocket, buffer, strlen(buffer), 0);
         bzero(buffer, sizeof(buffer));
+        char bufferans[1024];
+        int bytesRead = recv(clientSocket, bufferans, sizeof(bufferans), 0);
+        bufferans[bytesRead] = '\0';
+        printf("%s\n", bufferans);
     }
 
     // Close the client socket (not reached in this code)
