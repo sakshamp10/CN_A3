@@ -78,16 +78,25 @@ int main() {
 
     // User input and send messages to the server
     char buffer[1024];
+    // while (1) {
+    //     printf("Client: ");
+    //     fgets(buffer, sizeof(buffer), stdin);
+    //     send(clientSocket, buffer, strlen(buffer), 0);
+    //     bzero(buffer, sizeof(buffer));
+    //     char bufferans[1024];
+    //     int by = recv(clientSocket, bufferans, sizeof(bufferans), 0);
+    //     bufferans[by] = '\0';
+    //     printf("%s\n", bufferans);
+    // }
     while (1) {
-        printf("Client: ");
-        fgets(buffer, sizeof(buffer), stdin);
-        send(clientSocket, buffer, strlen(buffer), 0);
-        bzero(buffer, sizeof(buffer));
-        char bufferans[1024];
-        int by = recv(clientSocket, bufferans, sizeof(bufferans), 0);
-        bufferans[by] = '\0';
-        printf("%s\n", bufferans);
-    }
+    printf("Client: ");
+    fgets(buffer, sizeof(buffer), stdin);
+    buffer[strcspn(buffer, "\n")] = 0; // Remove newline character from the buffer
+    send(clientSocket, buffer, strlen(buffer), 0);
+    
+    // No need to immediately receive here, let the serverHandler thread handle incoming messages
+    bzero(buffer, sizeof(buffer)); // Clear the buffer for the next message
+}
 
     // Close the client socket (not reached in this code)
     close(clientSocket);
