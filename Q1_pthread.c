@@ -44,6 +44,7 @@ void *clientHandler(void *arg) {
             unsigned int result;
 
             result = atoi(buffer);
+            printf("\n%u\n",result);
             unsigned int ans=fact(result);
             unsigned int ans2=ans,l=0;
             while(ans2>0){
@@ -54,7 +55,7 @@ void *clientHandler(void *arg) {
             sprintf(charArray, "%u", ans);
             charArray[l]='\0';
             send(clientSocket, charArray, strlen(charArray), 0);
-            // printf("Client: %s\n", buffer);
+            printf("Client: %s\n", buffer);
         }
     }
 
