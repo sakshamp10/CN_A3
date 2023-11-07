@@ -12,13 +12,13 @@
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
 
-unsigned int min(unsigned int a, unsigned int b){
+unsigned int min(unsigned int a, unsigned int b) {
     return a < b ? a : b;
 }
 
-unsigned int fact(unsigned int n){
+unsigned int fact(unsigned int n) {
     unsigned int result = 1;
-    for(unsigned int j = 1; j <= min(n, 20); j++){ // Limit to prevent overflow
+    for (unsigned int j = 1; j <= min(n, 20); j++) {
         result *= j;
     }
     return result;
@@ -36,7 +36,9 @@ void *clientHandler(void *arg) {
     while (1) {
         bytesRead = recv(clientSocket, buffer, BUFFER_SIZE, 0);
         if (bytesRead <= 0) {
-            if (bytesRead < 0) perror("recv error");
+            if (bytesRead < 0) {
+                perror("recv error");
+            }
             break;
         }
         buffer[bytesRead] = '\0';
@@ -44,9 +46,14 @@ void *clientHandler(void *arg) {
         unsigned int num = atoi(buffer);
         unsigned int ans = fact(num);
 
-        char charArray[BUFFER_SIZE];
-        snprintf(charArray, sizeof(charArray), "%u", ans);
-        send(clientSocket, charArray, strlen(charArray), 0);
+        char response[BUFFER_SIZE];
+        int response_length = snprintf(response, sizeof(response), "%u", ans);
+        if (response_length >= 0 && response_length < BUFFER_SIZE) {
+            send(clientSocket, response, response_length, 0);
+        } else {
+            perror("snprintf error");
+            break;
+        }
     }
 
     close(clientSocket);
@@ -65,7 +72,7 @@ int main() {
         perror("Error in connection");
         exit(1);
     }
-    printf("Server Socket is created\n");
+    printf("Server Socket is created.\n");
 
     memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
@@ -96,8 +103,8 @@ int main() {
         }
         printf("Connection accepted from %s:%d\n", inet_ntoa(cliAddr.sin_addr), ntohs(cliAddr.sin_port));
 
-        int *clientSocketPtr = malloc(sizeof(int));
-        if(clientSocketPtr == NULL) {
+        int *clientSocketPtr = (int *)malloc(sizeof(int));
+        if (clientSocketPtr == NULL) {
             perror("malloc error");
             close(clientSocket);
             continue;
@@ -115,5 +122,5 @@ int main() {
     }
 
     close(sockfd);
-    return 0;
+    return 0;
 }
