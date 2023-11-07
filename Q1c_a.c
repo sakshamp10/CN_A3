@@ -150,7 +150,7 @@ int main (int argc, char **argv)
                         error("accept");
 
                     // Send a welcome message to the client
-                    if (send(client_fd, WELCOME_MSG, strlen(WELCOME_MSG), 0) == -1) {
+                    if (send(client_fd, "hello world!", strlen("hello world!"), 0) == -1) {
                         error("send");
                     }
 
