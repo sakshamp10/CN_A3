@@ -1,308 +1,132 @@
-/* 
- *           flight-time-server.c: record and provide time of a
- *                                 flight from the airport
- *
- */
-
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-#include <sys/types.h>
+#include <string.h>
+#include <unistd.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netdb.h>
-#include <poll.h>
-#include <errno.h>
-#include <syslog.h>
-#include <unistd.h>
-#include <stdbool.h>
-#include <ctype.h>
-#include <stdint.h>
+#include <pthread.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #include <time.h>
 
-#define FLIGHT_NUM_SIZE            15
+#define LOG_FILE_NAME "2d2.txt"
+FILE *filedis = NULL;
 
-#define SERVER_PORT                "8080"
-#define STORE_FLIGHT               1
-#define FLIGHT_TIME_STORED         2
-#define FLIGHT_TIME                3
-#define FLIGHT_TIME_RESULT         4
-#define FLIGHT_NOT_FOUND           5
-#define ERROR_IN_INPUT             9
+#define PORT 6969
 
-#define BACKLOG                   10
-#define NUM_FDS                    5
+long long factorial(long long n){
 
-void error (char *msg);
+	unsigned long long ans = 1;
+	for (int i = 1 ; i <= n ; i++){
+		ans *= i;
+	}
+	return ans;
 
-struct message {
-    int32_t message_id;
-    char flight_no [FLIGHT_NUM_SIZE + 1];
-    char departure [1 + 1]; // 'D': departure, 'A': arrival
-    char date [10 + 1]; // dd/mm/yyyy
-    char time [5 + 1];   // hh:mm
-};
+}
 
-struct tnode {
-    char *flight_no;
-    bool departure; // true: departure, false: arrival
-    time_t flight_time;
-    struct tnode *left;
-    struct tnode *right;
-};
+int check(int exp, const char* msg){
+	if( exp < 0){
+		perror(msg);
+		exit(1);
+	}
+}
 
-struct message recv_message, send_message;
 
-struct tnode *add_to_tree (struct tnode *p, char *flight_no, bool departure, time_t flight_time);
-struct tnode *find_flight_rec (struct tnode *p, char *flight_no);
-void print_tree (struct tnode *p);
-void trim (char *dest, char *src); 
-void error (char *msg);
+int main(){
 
-int main (int argc, char **argv)
-{
-    const char * const ident = "flight-time-server";
+	int sockfd, b, newSocket;
 
-    openlog (ident, LOG_CONS | LOG_PID | LOG_PERROR, LOG_USER);
-    syslog (LOG_USER | LOG_INFO, "%s", "Hello world!");
-    
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof (struct addrinfo));
-    hints.ai_family = AF_UNSPEC;    /* allow IPv4 or IPv6 */
-    hints.ai_socktype = SOCK_STREAM; /* Stream socket */
-    hints.ai_flags = AI_PASSIVE;    /* for wildcard IP address */
+	struct sockaddr_in serverAddr, clienAddr;
 
-    struct addrinfo *result;
-    int s; 
-    if ((s = getaddrinfo (NULL, SERVER_PORT, &hints, &result)) != 0) {
-        fprintf (stderr, "getaddrinfo: %s\n", gai_strerror (s));
-        exit (EXIT_FAILURE);
-    }
+	socklen_t addr_size;
 
-    /* Scan through the list of address structures returned by 
-       getaddrinfo. Stop when the the socket and bind calls are successful. */
+	char mssg[100];   
+	pid_t pid;
 
-    int listener, optval = 1;
-    socklen_t length;
-    struct addrinfo *rptr;
-    for (rptr = result; rptr != NULL; rptr = rptr -> ai_next) {
-        listener = socket (rptr -> ai_family, rptr -> ai_socktype,
-                       rptr -> ai_protocol);
-        if (listener == -1)
-            continue;
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	check(sockfd, "error in socket\n");
 
-        if (setsockopt (listener, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof (int)) == -1)
-            error("setsockopt");
 
-        if (bind (listener, rptr -> ai_addr, rptr -> ai_addrlen) == 0)  // Success
-            break;
+	memset(&serverAddr, '\0', sizeof(serverAddr));
+	serverAddr.sin_addr.s_addr = inet_addr("10.0.2.15");
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(PORT);
 
-        if (close (listener) == -1)
-            error ("close");
-    }
 
-    if (rptr == NULL) {               // Not successful with any address
-        fprintf(stderr, "Not able to bind\n");
-        exit (EXIT_FAILURE);
-    }
+	b = bind(sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+	check(b, "error in bind\n");
 
-    freeaddrinfo (result);
+	if(listen(sockfd, 10) < 0)perror("Error on listening\n");
 
-    // Mark socket for accepting incoming connections using accept
-    if (listen (listener, BACKLOG) == -1)
-        error ("listen");
 
-    nfds_t nfds = 0;
-    struct pollfd *pollfds;
-    int maxfds = 0, numfds = 0;
+    fd_set fds, readfds;
+    FD_ZERO(&fds);
+    FD_SET(sockfd, &fds);
+    if( filedis == NULL)filedis = fopen( LOG_FILE_NAME, "w");
+    int fdmax = sockfd;
 
-    if ((pollfds = malloc (NUM_FDS * sizeof (struct pollfd))) == NULL)
-	error ("malloc");
-    maxfds = NUM_FDS;
 
-    pollfds[0].fd = listener;
-    pollfds[0].events = POLLIN;
-    numfds = 1;
-    
-    socklen_t addrlen;
-    struct sockaddr_storage client_saddr;
-    char str [INET6_ADDRSTRLEN];
-    struct sockaddr_in  *ptr;
-    struct sockaddr_in6  *ptr1;
-    struct tnode *root = NULL;
+	double time_spent = 0.0;
+	clock_t begin = clock();
 
-    while (1) {
-        nfds = numfds;
-        if (poll(pollfds, nfds, -1) == -1)
-            error("poll");
 
-        for (int fd = 0; fd < nfds; fd++) {
-            if (pollfds[fd].fd <= 0) // Skip invalid descriptors
-                continue;
+    while(1){
 
-            if (pollfds[fd].revents & POLLIN) {
-                if (pollfds[fd].fd == listener) {
-                    // New connection request
-                    addrlen = sizeof(client_saddr);
-                    int client_fd = accept(listener, (struct sockaddr *)&client_saddr, &addrlen);
-                    if (client_fd == -1)
-                        error("accept");
 
-                    // Send a welcome message to the client
-                    if (send(client_fd, "hello world!", strlen("hello world!"), 0) == -1) {
-                        error("send");
+        readfds = fds;
+
+        if( select(fdmax + 1 , &readfds, NULL, NULL, NULL) < 0)perror("error at select");
+        
+        for( int fd = 0; fd < (fdmax + 1); fd++){
+            
+            if( FD_ISSET( fd, &readfds)){  // check if this fd is ready for reading
+
+                if( fd == sockfd){    // request for new connection
+
+                    newSocket = accept(sockfd, (struct sockaddr*)&clienAddr, &addr_size);
+                    if(newSocket < 0){
+                        exit(1);
                     }
 
-                    // Add the new file descriptor to pollfds
-                    if (numfds == maxfds) {
-                        maxfds += NUM_FDS;
-                        pollfds = realloc(pollfds, maxfds * sizeof(struct pollfd));
-                        if (!pollfds)
-                            error("realloc");
-                    }
+                    char *IP = inet_ntoa(clienAddr.sin_addr);
+                    int PORT_NO = ntohs(clienAddr.sin_port);
+                    
 
-                    pollfds[numfds].fd = client_fd;
-                    pollfds[numfds].events = POLLIN;
-                    numfds++;
-		    (pollfds + numfds - 1) -> fd = client_fd;
-                    (pollfds + numfds - 1) -> events = POLLIN;
-                    (pollfds + numfds - 1) -> revents = 0;
+                    fprintf(filedis, "IP : %s  PORT : %d\n", IP, PORT_NO);
+                    
+                    printf("Connection accepted from IP : %s: and PORT : %d\n", IP, PORT_NO);
 
-                    // print IP address of the new client
-                    if (client_saddr.ss_family == AF_INET) {
-                        ptr = (struct sockaddr_in *) &client_saddr;
-                        inet_ntop (AF_INET, &(ptr -> sin_addr), str, sizeof (str));
-                    }
-                    else if (client_saddr.ss_family == AF_INET6) {
-                        ptr1 = (struct sockaddr_in6 *) &client_saddr;
-	                inet_ntop (AF_INET6, &(ptr1 -> sin6_addr), str, sizeof (str));
-                    }
-                    else
-                    {
-                        ptr = NULL;
-                        fprintf (stderr, "Address family is neither AF_INET nor AF_INET6\n");
-                    }
-                    if (ptr) 
-                        syslog (LOG_USER | LOG_INFO, "%s %s", "Connection from client", str);
-                
+                    FD_SET(newSocket, &fds);
+                    if( newSocket > fdmax)fdmax = newSocket;
+
+
+                }else{   // some client is sending data
+
+                    bzero(mssg, 100);
+                    int numbytes = recv( fd, &mssg, sizeof(mssg), 0);
+
+                    long long num = atoi(mssg);
+                    fprintf(filedis, "INTEGER : %lld  FACTORIAL : %lld\n", num , factorial(num));
+                    sprintf(mssg, "%lld", factorial(num));
+
+                    send(fd, &mssg, sizeof(mssg), 0);
+
                 }
-                else  // data from an existing connection, receive it
-                {
-                    memset (&recv_message, '\0', sizeof (struct message));
-                    ssize_t numbytes = recv ((pollfds + fd) -> fd, &recv_message, sizeof (struct message), 0);
-   
-                    if (numbytes == -1)
-                        error ("recv");
-                    else if (numbytes == 0) {
-                        // connection closed by client
-                        fprintf (stderr, "Socket %d closed by client\n", (pollfds + fd) -> fd);
-                        if (close ((pollfds + fd) -> fd) == -1)
-                            error ("close");
-			(pollfds + fd) -> fd *= -1; // make it negative so that it is ignored in future
-                    }
-                    else 
-                    {
-                        // data from client
-                        bool valid;
-                        char temp_buf [FLIGHT_NUM_SIZE + 1];
-                    }
-                }
-            } // if (fd == ...
-        } // for
-    } // while (1)
 
-    exit (EXIT_SUCCESS);
-} // main
+            }
+        }
 
-// record the flight departure / arrival time    
-struct tnode *add_to_tree (struct tnode *p, char *flight_no, bool departure, time_t flight_time)
-{
-    int res;
-
-    if (p == NULL) {  // new entry
-        if ((p = (struct tnode *) malloc (sizeof (struct tnode))) == NULL)
-            error ("malloc");
-        p -> flight_no = strdup (flight_no);
-        p -> departure = departure;
-        p -> flight_time = flight_time;
-        p -> left = p -> right = NULL;
     }
-    else if ((res = strcmp (flight_no, p -> flight_no)) == 0) { // entry exists
-        p -> departure = departure;
-        p -> flight_time = flight_time;
-    }
-    else if (res < 0) // less than flight_no for this node, put in left subtree
-        p -> left = add_to_tree (p -> left, flight_no, departure, flight_time);
-    else   // greater than flight_no for this node, put in right subtree
-        p -> right = add_to_tree (p -> right, flight_no, departure, flight_time);
-    return p;
-}
-
-// find node for the flight for which departure or arrival time is queried
-struct tnode *find_flight_rec (struct tnode *p, char *flight_no)
-{
-    int res;
-
-    if (!p) 
-        return p;
-    res = strcmp (flight_no, p -> flight_no);
     
-    if (!res)
-        return p;
+    
+    clock_t end = clock();
+	time_spent += (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("The elapsed time is %f seconds", time_spent);
 
-    if (res < 0)
-        return find_flight_rec (p -> left, flight_no);
-    else 
-        return find_flight_rec (p -> right, flight_no);
+    close(sockfd);
+
+	return 0;
 }
 
-// print_tree: print the tree (in-order traversal)
-void print_tree (struct tnode *p)
-{
-    if (p != NULL) {
-        print_tree (p -> left);
-        printf ("%s: %d %s\n\n", p -> flight_no, (int) p -> departure, ctime (&(p -> flight_time)));
-        print_tree (p -> right);
-    }
-}
-
-void error (char *msg)
-{
-    perror (msg);
-    exit (1);
-}
-
-// trim: leading and trailing whitespace of string
-void trim (char *dest, char *src)
-{
-    if (!src || !dest)
-       return;
-
-    int len = strlen (src);
-
-    if (!len) {
-        *dest = '\0';
-        return;
-    }
-    char *ptr = src + len - 1;
-
-    // remove trailing whitespace
-    while (ptr > src) {
-        if (!isspace (*ptr))
-            break;
-        ptr--;
-    }
-
-    ptr++;
-
-    char *q;
-    // remove leading whitespace
-    for (q = src; (q < ptr && isspace (*q)); q++)
-        ;
-
-    while (q < ptr)
-        *dest++ = *q++;
-
-    *dest = '\0';
-}
