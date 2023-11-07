@@ -6,100 +6,167 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <pthread.h>
+#include <pthread.h> // Include the pthread library
 
-// PORT number
 #define PORT 4444
 
-// Function to handle client connections
-void *handleClient(void *arg) {
-    int clientSocket = *((int *)arg);
-    free(arg);
+int clientSocket;
 
-    char message[] = "hi client";
-    send(clientSocket, message, strlen(message), 0);
-
-    // Close the client socket
-    close(clientSocket);
+void *receiveMessage(void *arg) {
+    char buffer[1024];
+    while (1) {
+        if (recv(clientSocket, buffer, sizeof(buffer), 0) < 0) {
+            printf("Error in receiving data.\n");
+        } else {
+            printf("Server: %s\n", buffer);
+            memset(buffer, 0, sizeof(buffer));
+        }
+    }
     return NULL;
 }
 
 int main() {
-    // Server socket id
-    int sockfd, ret;
-
-    // Server socket address structures
-    struct sockaddr_in serverAddr;
-
-    // Client socket id
-    int clientSocket;
-
-    // Client socket address structures
+    int ret;
     struct sockaddr_in cliAddr;
+    struct sockaddr_in serverAddr;
+    char buffer[1024];
 
-    // Stores byte size of server socket address
-    socklen_t addr_size;
+    clientSocket = socket(AF_INET, SOCK_STREAM, 0);
 
-    // Creates a TCP socket id from IPV4 family
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (clientSocket < 0) {
+        printf("Error in connection.\n");
+        exit(1);
+    }
+    printf("Client Socket is created.\n");
 
-    // Error handling if socket id is not valid
-    if (sockfd < 0) {
+    memset(&cliAddr, '\0', sizeof(cliAddr));
+    memset(buffer, '\0', sizeof(buffer));
+
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(PORT);
+    serverAddr.sin_addr.s_addr = inet_addr("10.0.2.15");
+
+    ret = connect(clientSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+
+    if (ret < 0) {
         printf("Error in connection.\n");
         exit(1);
     }
 
-    printf("Server Socket is created.\n");
+    printf("Connected to Server.\n");
 
-    // Initializing address structure with NULL
-    memset(&serverAddr, '\0', sizeof(serverAddr));
-
-    // Assign port number and IP address to the socket created
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(PORT);
-
-    // 127.0.0.1 is a loopback address
-    serverAddr.sin_addr.s_addr = inet_addr("10.0.2.15");
-
-    // Binding the socket id with the socket structure
-    ret = bind(sockfd, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
-
-    // Error handling
-    if (ret < 0) {
-        printf("Error in binding.\n");
+    pthread_t receiveThread;
+    // Create a thread for receiving messages
+    if (pthread_create(&receiveThread, NULL, receiveMessage, NULL) != 0) {
+        perror("Failed to create receive thread");
         exit(1);
     }
 
-    // Listening for connections (up to 10)
-    if (listen(sockfd, 10) == 0) {
-        printf("Listening...\n\n");
-    }
-
-    int cnt = 0;
     while (1) {
-        // Accept clients and store their information in cliAddr
-        addr_size = sizeof(cliAddr);
-        clientSocket = accept(sockfd, (struct sockaddr *)&cliAddr, &addr_size);
+        // Handle user input
+        char userMessage[1024];
+        printf("You: ");
+        fgets(userMessage, sizeof(userMessage), stdin);
+        userMessage[strcspn(userMessage, "\n")] = '\0'; // Remove the newline character
 
-        // Error handling
-        if (clientSocket < 0) {
-            exit(1);
+        // Send user's message to the server
+        send(clientSocket, userMessage, strlen(userMessage), 0);
+
+        // Check if the user wants to exit
+        if (strcmp(userMessage, "exit") == 0) {
+            printf("Exiting the chat.\n");
+            break; // Exit the loop and close the program
         }
-
-        // Displaying information of connected client
-        printf("Connection accepted from %s:%d\n", inet_ntoa(cliAddr.sin_addr), ntohs(cliAddr.sin_port));
-
-        // Print the number of clients connected till now
-        printf("Clients connected: %d\n\n", ++cnt);
-
-        // Create a new thread to handle the client
-        pthread_t tid;
-        int *clientSocketPtr = (int *)malloc(sizeof(int));
-        *clientSocketPtr = clientSocket;
-        pthread_create(&tid, NULL, handleClient, clientSocketPtr);
     }
 
-    // Close the server socket id (unreachable code in this example)
-    close(sockfd);
+    pthread_join(receiveThread, NULL); // Wait for the receive thread to finish
+    close(clientSocket); // Close the socket when done
+
+    return 0;
+}
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <pthread.h> // Include the pthread library
+
+#define PORT 4444
+
+int clientSocket;
+
+void *receiveMessage(void *arg) {
+    char buffer[1024];
+    while (1) {
+        if (recv(clientSocket, buffer, sizeof(buffer), 0) < 0) {
+            printf("Error in receiving data.\n");
+        } else {
+            printf("Server: %s\n", buffer);
+            memset(buffer, 0, sizeof(buffer));
+        }
+    }
+    return NULL;
+}
+
+int main() {
+    int ret;
+    struct sockaddr_in cliAddr;
+    struct sockaddr_in serverAddr;
+    char buffer[1024];
+
+    clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (clientSocket < 0) {
+        printf("Error in connection.\n");
+        exit(1);
+    }
+    printf("Client Socket is created.\n");
+
+    memset(&cliAddr, '\0', sizeof(cliAddr));
+    memset(buffer, '\0', sizeof(buffer));
+
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(PORT);
+    serverAddr.sin_addr.s_addr = inet_addr("10.0.2.15");
+
+    ret = connect(clientSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+
+    if (ret < 0) {
+        printf("Error in connection.\n");
+        exit(1);
+    }
+
+    printf("Connected to Server.\n");
+
+    pthread_t receiveThread;
+    // Create a thread for receiving messages
+    if (pthread_create(&receiveThread, NULL, receiveMessage, NULL) != 0) {
+        perror("Failed to create receive thread");
+        exit(1);
+    }
+
+    while (1) {
+        // Handle user input
+        char userMessage[1024];
+        printf("You: ");
+        fgets(userMessage, sizeof(userMessage), stdin);
+        userMessage[strcspn(userMessage, "\n")] = '\0'; // Remove the newline character
+
+        // Send user's message to the server
+        send(clientSocket, userMessage, strlen(userMessage), 0);
+
+        // Check if the user wants to exit
+        if (strcmp(userMessage, "exit") == 0) {
+            printf("Exiting the chat.\n");
+            break; // Exit the loop and close the program
+        }
+    }
+
+    pthread_join(receiveThread, NULL); // Wait for the receive thread to finish
+    close(clientSocket); // Close the socket when done
+
     return 0;
 }
