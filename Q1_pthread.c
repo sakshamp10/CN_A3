@@ -55,7 +55,7 @@ void *clientHandler(void *arg) {
             sprintf(charArray, "%u", ans);
             charArray[l]='\0';
             send(clientSocket, charArray, strlen(charArray), 0);
-            printf("Client: %s\n", buffer);
+            printf("Client: %s\n", charArray);
         }
     }
 
