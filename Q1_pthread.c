@@ -48,7 +48,7 @@ void *clientHandler(void *arg) {
             unsigned int ans=fact(result);
             unsigned int ans2=ans,l=0;
             while(ans2>0){
-                ans2=ans2%10;
+                ans2=ans2/10;
                 l++;
             }
             char charArray[l+1];
