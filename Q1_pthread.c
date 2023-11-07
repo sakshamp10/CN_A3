@@ -74,7 +74,7 @@ int main() {
     serverAddr.sin_addr.s_addr = INADDR_ANY; // Use INADDR_ANY to bind to all available network interfaces
 
     // Bind the socket id with the socket structure
-    ret = bind(sockfd, (struct sockaddr *)&serverAddr, sizeof(serverAddr);
+    ret = bind(sockfd, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
 
     // Error handling
     if (ret < 0) {
