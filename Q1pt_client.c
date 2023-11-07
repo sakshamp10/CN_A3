@@ -61,7 +61,7 @@ int main() {
     serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
     // connect() to connect to the server
-    ret = connect(clientSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr);
+    ret = connect(clientSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
 
     if (ret < 0) {
         printf("Error in connection.\n");
