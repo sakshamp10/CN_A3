@@ -98,8 +98,6 @@ int main() {
         bzero(buffer, sizeof(buffer)); // Clear the buffer for the next message
         bzero(bufferans, sizeof(bufferans)); // Clear the response buffer
     }
-
-    // Close the client socket (not reached in this code)
     close(clientSocket);
 
     return 0;
