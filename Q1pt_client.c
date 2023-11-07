@@ -30,7 +30,7 @@ int main() {
     printf("Client Socket is created.\n");
 
     // Initializing server socket structure with NULL
-    memset(&serverAddr, 0, sizeof(serverAddr);
+    memset(&serverAddr, 0, sizeof(serverAddr));
 
     // Initializing buffer array with NULL
     memset(buffer, 0, sizeof(buffer));
